@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useDispatch } from "react-redux";
@@ -15,7 +16,11 @@ interface FarmPostFormProps {
   farmId?: string;
 }
 
-const FarmPostForm: React.FC<FarmPostFormProps> = ({ initialData, farmId }) => {
+// Changed from const to function declaration
+export default function FarmPostForm({
+  initialData,
+  farmId,
+}: FarmPostFormProps) {
   const dispatch = useDispatch<AppDispatch>();
   const { data: session } = useSession();
   const userId = session?.user?.id;
@@ -54,6 +59,4 @@ const FarmPostForm: React.FC<FarmPostFormProps> = ({ initialData, farmId }) => {
       )}
     </>
   );
-};
-
-export default FarmPostForm;
+}
