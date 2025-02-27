@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/store";
-import {v4 as uuidv4} from "uuid";
 
 import { useToast } from "@/components/ui/use-toast";
 import { createStorePost, setCurrentStorePost, updateStorePost } from "@/store/post.slice";
@@ -146,7 +145,7 @@ export const useStoreSubmit = (userId?: string) => {
             currency: storeImage.currency,
             available: storeImage.available ?? true,
           };
-    
+          
           await dispatch(addImage(imageData)).unwrap();
           toast({
             title: "Success",

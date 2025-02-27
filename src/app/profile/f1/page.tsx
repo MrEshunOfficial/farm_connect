@@ -15,8 +15,6 @@ interface FarmPostFormProps {
   initialData?: Partial<IFarmPostDocument>;
   farmId?: string;
 }
-
-// Changed from const to function declaration
 export default function FarmPostForm({
   initialData,
   farmId,

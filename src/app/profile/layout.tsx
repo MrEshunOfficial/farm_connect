@@ -51,16 +51,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <motion.main className="w-full h-full flex flex-col md:flex-row items-stretch gap-2 dark:bg-black text-gray-900 dark:text-gray-100">
-      {/* Mobile Overlay */}
-      {isMobile && isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-
       {/* Sidebar */}
-      <AsideLayout />
+      <AsideLayout
+        isMobile={isMobile}
+        initialCollapsed={isSidebarCollapsed}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        setIsSidebarCollapsed={setIsSidebarCollapsed}
+      />
 
       {/* Main Content */}
       <motion.section

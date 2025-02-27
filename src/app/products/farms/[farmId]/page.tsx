@@ -25,8 +25,6 @@ export default function ProductDetails() {
   const loading = useSelector(selectPostsLoading);
   const error = useSelector(selectPostsError);
 
-  console.log(currentPost);
-
   const [mainImage, setMainImage] = useState<string>("");
   const [allImages, setAllImages] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);

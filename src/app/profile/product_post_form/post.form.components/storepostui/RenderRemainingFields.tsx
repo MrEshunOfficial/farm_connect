@@ -25,6 +25,7 @@ import {
   X,
   Plus,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import {
   Form,
@@ -40,8 +41,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { UseFormReturn } from "react-hook-form";
-import { StoreFormValues } from "./StoreFormUi";
 import Link from "next/link";
+import { StoreFormValues } from "@/store/type/storeTypes";
 
 interface RemainingFieldsProps {
   form: UseFormReturn<StoreFormValues>;
@@ -92,7 +93,9 @@ const RemainingFields: React.FC<RemainingFieldsProps> = ({
   };
 
   const handleRemoveTag = (index: number) => {
-    const updatedTags = tags.filter((_, i) => i !== index);
+    const updatedTags: { label: string; value: string }[] = tags.filter(
+      (_, i: number) => i !== index
+    );
     form.setValue("tags", updatedTags);
   };
 
@@ -138,7 +141,7 @@ const RemainingFields: React.FC<RemainingFieldsProps> = ({
               <FormItem className="border-b pb-4">
                 <FormLabel className="flex flex-col items-start gap-1">
                   <span className="flex items-center">
-                    <Tags className="h-4 w-4 text-indigo-500" />
+                    <Tags className="h-4 w-4 mr-1 text-indigo-500" />
                     Tags
                   </span>
                   <small>
@@ -172,22 +175,32 @@ const RemainingFields: React.FC<RemainingFieldsProps> = ({
                     </Button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {tags.map((tag, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded"
-                      >
-                        <span className="font-medium">{tag.label}</span>
-                        <span className="text-gray-500">: {tag.value}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTag(index)}
-                          className="text-gray-500 hover:text-gray-700 ml-1"
+                    {tags.map(
+                      (
+                        tag: { label: string; value: string },
+                        index: number
+                      ) => (
+                        <div
+                          key={index}
+                          className="w-full flex items-center gap-2"
                         >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </span>
-                    ))}
+                          <span className="flex-1 border rounded-md p-2">
+                            {tag.label}
+                          </span>
+                          <span className="flex-1 border rounded-md p-2">
+                            {tag.value}
+                          </span>
+                          <Button
+                            type="button"
+                            variant={"destructive"}
+                            size={"sm"}
+                            onClick={() => handleRemoveTag(index)}
+                          >
+                            <Trash2 size={18} />
+                          </Button>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
               </FormItem>

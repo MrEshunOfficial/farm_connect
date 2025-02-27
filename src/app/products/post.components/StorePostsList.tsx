@@ -6,7 +6,6 @@ import { Loader2, ShoppingBag, TagIcon, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { selectPostsError, selectPostsLoading } from "@/store/post.slice";
 import { useSelector } from "react-redux";
-import { ScrollArea } from "@radix-ui/react-scroll-area";
 import {
   IFarmPostDocument,
   IStorePostDocument,
@@ -77,48 +76,63 @@ const PostCard: React.FC<PostCardProps> = ({
   rentOptions = false,
   rentUnit = "",
 }) => (
-  <Link href={href} passHref>
-    <Card className="w-full group h-full hover:shadow-xl transition-all duration-300 bg-background/50 hover:bg-background border-2">
-      <CardContent className="p-4 flex flex-col h-full">
-        <div className="aspect-square relative overflow-hidden rounded-lg mb-4">
-          <Image
-            src={imageSrc}
-            alt={imageAlt}
-            layout="fill"
-            objectFit="cover"
-            className="group-hover:scale-105 transition-transform duration-300"
-          />
+  <Link href={href} passHref className="block h-full">
+    <Card className="h-full flex flex-col group overflow-hidden hover:shadow-xl transition-all duration-300 bg-background/50 hover:bg-background border hover:border-primary/20 border-border">
+      <div className="relative w-full aspect-square overflow-hidden">
+        <Image
+          src={imageSrc}
+          alt={imageAlt}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          className="object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
+        />
+        <div className="absolute top-2 right-2">
+          <Badge
+            variant="secondary"
+            className="font-medium bg-background/80 backdrop-blur-sm"
+          >
+            {condition}
+          </Badge>
         </div>
+      </div>
 
-        <div className="flex-1 space-y-3">
-          <h3 className="text-lg font-semibold capitalize line-clamp-1 tracking-tight flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5 text-primary flex-shrink-0" />
-            {title}
+      <CardContent className="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div className="space-y-2">
+          <h3 className="text-base font-semibold capitalize tracking-tight line-clamp-1 flex items-center gap-2">
+            <ShoppingBag className="h-4 w-4 text-primary flex-shrink-0" />
+            <span className="truncate">{title}</span>
           </h3>
-
-          <p className="flex items-center gap-2 text-base font-bold text-primary">
-            <TagIcon className="h-4 w-4 flex-shrink-0" />
-            {rentOptions
-              ? `Rate: ${currency} ${price}/${rentUnit}`
-              : `Price: ${currency} ${price}`}
-          </p>
 
           <p className="text-sm text-muted-foreground line-clamp-2">
             {description}
           </p>
+        </div>
 
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Badge variant="outline" className="text-xs">
-              {condition}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
+        <div className="space-y-3 mt-auto">
+          <div className="flex items-center">
+            <Badge variant="outline" className="text-xs truncate max-w-full">
               {category} - {subcategory}
             </Badge>
           </div>
+
+          <p className="flex items-center gap-2 text-base font-bold text-primary">
+            <TagIcon className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">
+              {rentOptions
+                ? `${currency} ${price.toLocaleString()}/${rentUnit}`
+                : `${currency} ${price.toLocaleString()}`}
+            </span>
+          </p>
         </div>
       </CardContent>
     </Card>
   </Link>
+);
+
+const PostsGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+    {children}
+  </div>
 );
 
 const StorePostsList: React.FC<StorePostsListProps> = ({ storePosts }) => {
@@ -127,11 +141,11 @@ const StorePostsList: React.FC<StorePostsListProps> = ({ storePosts }) => {
 
   if (loading) return <LoadingState />;
   if (error) return <ErrorState error={error} />;
-  if (!storePosts) return <EmptyState type="store" />;
+  if (!storePosts?.length) return <EmptyState type="store" />;
 
   return (
-    <ScrollArea className="w-full">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-4">
+    <div className="w-full px-4 py-6">
+      <PostsGrid>
         {storePosts.map((post) => (
           <PostCard
             key={post._id.toString()}
@@ -149,8 +163,8 @@ const StorePostsList: React.FC<StorePostsListProps> = ({ storePosts }) => {
             rentUnit={post.product.rentUnit}
           />
         ))}
-      </div>
-    </ScrollArea>
+      </PostsGrid>
+    </div>
   );
 };
 
@@ -160,11 +174,11 @@ const FarmPostsList: React.FC<FarmPostsListProps> = ({ farmPosts }) => {
 
   if (loading) return <LoadingState />;
   if (error) return <ErrorState error={error} />;
-  if (!farmPosts) return <EmptyState type="farm" />;
+  if (!farmPosts?.length) return <EmptyState type="farm" />;
 
   return (
-    <ScrollArea className="w-full">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-4">
+    <div className="w-full px-4 py-6">
+      <PostsGrid>
         {farmPosts.map((post) => (
           <PostCard
             key={post._id.toString()}
@@ -180,8 +194,8 @@ const FarmPostsList: React.FC<FarmPostsListProps> = ({ farmPosts }) => {
             subcategory={post.subcategory.name}
           />
         ))}
-      </div>
-    </ScrollArea>
+      </PostsGrid>
+    </div>
   );
 };
 

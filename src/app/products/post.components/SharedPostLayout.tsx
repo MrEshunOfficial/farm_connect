@@ -14,6 +14,9 @@ import {
   ChevronUp,
   ChevronDown,
   ExternalLink,
+  Expand,
+  MoveLeft,
+  MoveRight,
 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,17 +34,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import PlaceAnOrder from "./PlaceAnOrder";
 import { FaMapMarked } from "react-icons/fa";
-import { DeletePostButton } from "./DeletePostHandler";
-
-interface BaseUserProfile {
-  _id: Types.ObjectId | string;
-  fullName: string;
-  email: string;
-  phoneNumber: string;
-  profilePicture?: {
-    url: string;
-  };
-}
+import { DeletePostButton, EditPostButton } from "./DeletePostHandler";
+import {
+  IFarmPostDocument,
+  IStorePostDocument,
+} from "@/models/profileI-interfaces";
+import { useAppSelector } from "@/store/hooks";
 
 interface BaseProduct {
   negotiable?: boolean;
@@ -50,12 +48,7 @@ interface BaseProduct {
 }
 
 export interface BasePostProfileProps {
-  currentPost: {
-    _id: Types.ObjectId | string;
-    userId: Types.ObjectId | string;
-    userProfile: BaseUserProfile;
-    product: BaseProduct;
-  };
+  currentPost: IFarmPostDocument | IStorePostDocument;
   postType: "farm" | "store";
   mainImage: string;
   allImages: string[];
@@ -92,6 +85,7 @@ export function BasePostProfile({
 }: BasePostProfileProps) {
   const [displayedImage, setDisplayedImage] = useState<string>("");
   const [isOpen, setIsOpen] = useState(false);
+  const reviews = useAppSelector((state) => state.review.reviews);
 
   useEffect(() => {
     if (allImages.length > 0 && currentImageIndex >= 0) {
@@ -152,70 +146,141 @@ export function BasePostProfile({
     </div>
   );
 
-  const ImageGallery = () => (
-    <div className="w-full space-y-4">
-      <div className="relative group">
-        <div className="relative w-full h-96 rounded-md overflow-hidden">
-          <Image
-            src={displayedImage}
-            alt="Product Image"
-            fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            priority
-            className="object-cover"
-          />
-        </div>
-        <Button
-          variant="outline"
-          size="icon"
-          className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={onPrevImage}
-          disabled={allImages.length <= 1}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={onNextImage}
-          disabled={allImages.length <= 1}
-        >
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-      </div>
-      <ThumbnailGrid />
-      {renderMoreProductData()}
-    </div>
-  );
+  const ImageGallery = () => {
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
 
-  const ThumbnailGrid = () => (
-    <div className="flex items-center justify-start gap-2">
-      {allImages.map(
-        (image, index) =>
-          index !== 0 && (
-            <div
-              key={index}
-              className={`relative w-16 h-16 rounded-md overflow-hidden cursor-pointer
-              ${
-                currentImageIndex === index
-                  ? "ring-2 ring-blue-500"
-                  : "hover:opacity-75"
-              }`}
-              onClick={() => onImageClick(index)}
+    return (
+      <div className="w-full space-y-6">
+        {/* Main Image Container */}
+        <div
+          className="relative group rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          {/* Main Image */}
+          <div
+            className={`relative transition-all duration-300 ease-in-out
+            ${isFullscreen ? "h-[80vh]" : "h-[500px]"}`}
+          >
+            <Image
+              src={displayedImage}
+              alt="Product Image"
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover"
+            />
+          </div>
+
+          {/* Navigation Arrows */}
+          <div
+            className={`absolute inset-0 flex items-center justify-between px-4
+            ${isHovered ? "opacity-100" : "opacity-0"} 
+            transition-opacity duration-200`}
+          >
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-10 w-10 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white/90
+                dark:bg-black/50 dark:hover:bg-black/60"
+              onClick={onPrevImage}
+              disabled={allImages.length <= 1}
             >
-              <Image
-                src={image}
-                alt={`Product view ${index + 1}`}
-                width={64}
-                height={64}
-                className="object-cover w-full h-full"
-              />
+              <MoveLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-10 w-10 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white/90
+                dark:bg-black/50 dark:hover:bg-black/60"
+              onClick={onNextImage}
+              disabled={allImages.length <= 1}
+            >
+              <MoveRight className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Fullscreen Toggle */}
+          <Button
+            variant="secondary"
+            size="icon"
+            className={`absolute top-4 right-4 h-8 w-8 rounded-full bg-white/80 backdrop-blur-sm
+              hover:bg-white/90 dark:bg-black/50 dark:hover:bg-black/60
+              ${isHovered ? "opacity-100" : "opacity-0"} 
+              transition-opacity duration-200`}
+            onClick={() => setIsFullscreen(!isFullscreen)}
+          >
+            <Expand className="h-4 w-4" />
+          </Button>
+
+          {/* Image Counter */}
+          <div
+            className={`absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full
+            bg-white/80 backdrop-blur-sm dark:bg-black/50
+            ${isHovered ? "opacity-100" : "opacity-0"} 
+            transition-opacity duration-200`}
+          >
+            <span className="text-sm font-medium">
+              {currentImageIndex + 1} / {allImages.length}
+            </span>
+          </div>
+        </div>
+
+        {/* Thumbnail Grid */}
+        <div className="relative">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={onPrevImage}
+              disabled={allImages.length <= 1}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex-1 overflow-hidden">
+              <div className="flex gap-4 transition-transform duration-300 ease-in-out">
+                {allImages.map((image, index) => (
+                  <button
+                    key={index}
+                    className={`relative shrink-0 w-20 h-20 rounded-lg overflow-hidden
+                      transition-all duration-200 ease-in-out
+                      ${
+                        currentImageIndex === index
+                          ? "ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900"
+                          : "hover:opacity-80"
+                      }`}
+                    onClick={() => onImageClick(index)}
+                  >
+                    <Image
+                      src={image}
+                      alt={`Product view ${index + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
-          )
-      )}
-    </div>
-  );
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={onNextImage}
+              disabled={allImages.length <= 1}
+            >
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {renderMoreProductData()}
+      </div>
+    );
+  };
 
   return (
     <main className="w-full flex justify-between items-start p-2 space-x-2">
@@ -288,39 +353,47 @@ export function BasePostProfile({
             </div>
 
             <div className="space-y-4 custom-shadow-styling p-2 rounded-md">
-              <div className="flex items-center gap-2 w-full">
-                <Button
-                  className="flex-1 flex items-center justify-between border-blue-500 text-blue-500"
-                  variant="outline"
-                >
-                  <span className="flex items-center">
-                    <MessageCircleHeart size={18} className="mr-2" /> 0
-                  </span>
-                  <Link href={`/feedback/${currentPost.userProfile._id}`}>
-                    <ExternalLink size={12} className="ml-2" />
-                  </Link>
-                </Button>
-                <Button
-                  className="flex-1 border-red-500 text-red-500"
-                  variant="outline"
-                  size={"sm"}
-                >
-                  <Flag size={18} className="mr-2" />
-                </Button>
-              </div>
+              {currentPost.userId !== userId && (
+                <div className="flex items-center gap-2 w-full">
+                  <Button
+                    className="flex-1 flex items-center justify-between border-blue-500 text-blue-500"
+                    variant="outline"
+                  >
+                    <span className="flex items-center">
+                      <MessageCircleHeart size={18} className="mr-2" />{" "}
+                      {reviews.length}
+                    </span>
+                    <Link href={`/feedback/${currentPost.userProfile._id}`}>
+                      <ExternalLink size={12} className="ml-2" />
+                    </Link>
+                  </Button>
+
+                  <Button
+                    className="flex-1 border-red-500 text-red-500"
+                    variant="outline"
+                    size={"sm"}
+                  >
+                    <Flag size={18} className="mr-2" />
+                    Report
+                  </Button>
+                </div>
+              )}
 
               {currentPost.userId === userId && (
                 <div className="flex items-center gap-2 w-full">
                   {currentPost.userId === userId && (
-                    <div className="flex items-center gap-2 w-full">
-                      <Button className="flex-1" variant="secondary">
-                        <FaMapMarked size={18} className="mr-2" />
-                        Flag as Sold
-                      </Button>
-                      <DeletePostButton
-                        postId={currentPost._id.toString()}
-                        postType={postType}
-                      />
+                    <div className="flex flex-col items-center gap-2 w-full">
+                      <div className="flex items-center gap-2 w-full">
+                        <Button className="flex-1" variant="secondary">
+                          <Flag size={18} className="mr-2" />
+                          Flag as Sold
+                        </Button>
+                        <DeletePostButton
+                          postId={currentPost._id.toString()}
+                          postType={postType}
+                        />
+                      </div>
+                      <EditPostButton post={currentPost} postType={postType} />
                     </div>
                   )}
                 </div>

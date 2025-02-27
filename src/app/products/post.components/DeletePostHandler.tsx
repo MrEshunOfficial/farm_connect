@@ -13,7 +13,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { deleteFarmPost, deleteStorePost } from "@/store/post.slice";
 import { AppDispatch } from "@/store";
 
@@ -87,5 +87,66 @@ export const DeletePostButton = ({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+};
+
+import { Pencil } from "lucide-react";
+import { setCurrentFarmPost, setCurrentStorePost } from "@/store/post.slice";
+import {
+  IFarmPostDocument,
+  IStorePostDocument,
+} from "@/models/profileI-interfaces";
+import { useRouter } from "next/navigation";
+
+interface EditPostButtonProps {
+  post: IFarmPostDocument | IStorePostDocument;
+  postType: "farm" | "store";
+  onSuccess?: () => void;
+}
+
+export const EditPostButton = ({
+  post,
+  postType,
+  onSuccess,
+}: EditPostButtonProps) => {
+  const [isNavigating, setIsNavigating] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const handleEdit = async () => {
+    try {
+      setIsNavigating(true);
+      if (postType === "farm") {
+        dispatch(setCurrentFarmPost(post as IFarmPostDocument));
+        router.push(`/profile/product_post_form/farm.ad.post/edit/${post._id}`);
+      } else {
+        dispatch(setCurrentStorePost(post as IStorePostDocument));
+        router.push(
+          `/profile/product_post_form/store.ad.post/edit/${post._id}`
+        );
+      }
+      onSuccess?.();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to navigate to edit page. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsNavigating(false);
+    }
+  };
+
+  return (
+    <Button
+      variant="secondary"
+      className="w-full"
+      disabled={isNavigating}
+      onClick={handleEdit}
+    >
+      <Edit size={16} className="mr-2" />
+      {isNavigating ? "Loading..." : "Edit Ad"}
+    </Button>
   );
 };

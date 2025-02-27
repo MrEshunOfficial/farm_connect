@@ -9,8 +9,8 @@ import {
 } from "@/models/profileI-interfaces";
 
 interface PostParentComponentProps {
-  initialData?: Partial<IFarmPostDocument | IStorePostDocument>;
-  id?: string;
+  initialData?: Partial<IStorePostDocument | IFarmPostDocument>;
+  storeId?: string;
   mode?: "store" | "farm";
   formId?: string;
   farmId?: string;
@@ -18,8 +18,8 @@ interface PostParentComponentProps {
 
 const PostParentComponent: React.FC<PostParentComponentProps> = ({
   initialData = {},
-  id,
-  mode,
+  storeId,
+  mode = "store",
   formId,
   farmId,
 }) => {
@@ -36,7 +36,7 @@ const PostParentComponent: React.FC<PostParentComponentProps> = ({
         <StoreFormUI
           initialData={initialData as Partial<IStorePostDocument>}
           formId={formId}
-          storeId={id}
+          storeId={storeId}
         />
       )}
     </>

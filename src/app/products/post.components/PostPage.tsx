@@ -8,6 +8,8 @@ import {
   selectPostsError,
   selectPagination,
   selectFilteredPosts,
+  selectCategoryName,
+  selectSubcategoryName,
 } from "@/store/post.slice";
 import { Card } from "@/components/ui/card";
 import { PostGrid } from "./PostGrid";
@@ -26,6 +28,13 @@ export function PostsPage({ categoryId, subcategoryId }: PostsPageProps) {
 
   const { farmPosts, storePosts } = useSelector((state: RootState) =>
     selectFilteredPosts(state, { categoryId, subcategoryId })
+  );
+
+  const categoryName = useSelector((state: RootState) =>
+    selectCategoryName(state, categoryId)
+  );
+  const subcategoryName = useSelector((state: RootState) =>
+    subcategoryId ? selectSubcategoryName(state, subcategoryId) : undefined
   );
 
   const handleObserver = useCallback(
@@ -119,6 +128,18 @@ export function PostsPage({ categoryId, subcategoryId }: PostsPageProps) {
 
   return (
     <div className="container max-w-7xl h-[88vh] overflow-auto flex flex-col gap-6 bg-gray-50 dark:bg-gray-900 p-4">
+      {(categoryId || subcategoryId) && (
+        <h1 className="text-xl font-extrabold text-blue-600 dark:text-blue-400 tracking-wide">
+          Exploring{" "}
+          <span className="text-gray-900 dark:text-white">
+            {subcategoryName
+              ? `${subcategoryName}, ${categoryName}`
+              : categoryName}
+          </span>{" "}
+          Posts
+        </h1>
+      )}
+
       {(farmPosts.length > 0 || storePosts.length > 0) && (
         <>
           {farmPosts.length > 0 && (
@@ -135,7 +156,6 @@ export function PostsPage({ categoryId, subcategoryId }: PostsPageProps) {
           )}
         </>
       )}
-
       <div ref={loadingRef} className="w-full py-8 flex justify-center">
         {loading && <Loader2 className="w-8 h-8 animate-spin text-primary" />}
       </div>

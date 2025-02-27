@@ -48,15 +48,42 @@ const initialState: PostsState = {
   error: null,
   pagination: null,
 };
-
 interface FetchPostsParams {
   page?: number;
   limit?: number;
   category?: string;
   subcategory?: string;
-  region?: string;
   userId?: string;
+  location?: LocationParams;
+  searchQuery?: string;
+  region?: string;
+  district?: string;
 }
+
+interface PaginationResponse {
+  currentPage: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  totalDocs: number;
+}
+
+interface PostsResponse {
+  success: boolean;
+  error?: string;
+  data: {
+    farmPosts: IFarmPostDocument[];
+    storePosts: IStorePostDocument[];
+    pagination: PaginationResponse;
+  };
+}
+
+
+interface LocationParams {
+  region?: string;
+  district?: string;
+}
+
 
 
 export const fetchAllPosts = createAsyncThunk(
@@ -64,17 +91,30 @@ export const fetchAllPosts = createAsyncThunk(
   async (params: FetchPostsParams, { rejectWithValue }) => {
     try {
       const queryParams = new URLSearchParams();
+
+      // Basic pagination params
       if (params.page) queryParams.set('page', params.page.toString());
       if (params.limit) queryParams.set('limit', params.limit.toString());
+
+      // Category and subcategory filters
       if (params.category) queryParams.set('category', params.category);
       if (params.subcategory) queryParams.set('subcategory', params.subcategory);
-      if (params.region) queryParams.set('region', params.region);
+
+      // User filter
       if (params.userId) queryParams.set('userId', params.userId);
+
+      // Location filters
+      if (params.location?.region) queryParams.set('region', params.location.region);
+      if (params.location?.district) queryParams.set('district', params.location.district);
+
+      // Search query - adding this to match the API endpoint
+      if (params.searchQuery) queryParams.set('search', params.searchQuery);
 
       const response = await fetch(`/api/postapi?${queryParams.toString()}`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch posts');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch posts');
       }
 
       const data: PostsResponse = await response.json();
@@ -97,7 +137,7 @@ export const fetchAllPosts = createAsyncThunk(
         isNewSearch: params.page === 1 || !params.page
       };
     } catch (error: any) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.message || 'Failed to fetch posts');
     }
   }
 );
@@ -168,7 +208,7 @@ export const deleteFarmPost = createAsyncThunk(
   'posts/deleteFarmPost',
   async (id: string, { rejectWithValue }) => {
     try {
-      const response = await fetch(`/api/farm-posts/${id}`, {
+      const response = await fetch(`/api/postapi/me/farm-post/${id}`, {
         method: 'DELETE',
       });
       const data = await response.json();
@@ -425,7 +465,6 @@ const postsSlice = createSlice({
       })
       .addCase(fetchStorePostsParam.fulfilled, (state, action) => {
         state.loading = false;
-        // Handle both single post and multiple posts scenarios
         if (Array.isArray(action.payload)) {
           state.storePosts = action.payload;
         } else {
@@ -461,7 +500,6 @@ export const selectPostsByCategory = (state: { posts: PostsState }, categoryId: 
   storePosts: state.posts.storePosts.filter(post => post.category?.id === categoryId),
 });
 
-// Add a more comprehensive selector for filtered posts
 export const selectFilteredPosts = (
   state: { posts: PostsState },
   filters: {
@@ -469,6 +507,8 @@ export const selectFilteredPosts = (
     subcategoryId?: string;
     userId?: string;
     region?: string;
+    district?: string;
+    searchQuery?: string;
   }
 ) => {
   let farmPosts = state.posts.farmPosts;
@@ -494,5 +534,24 @@ export const selectFilteredPosts = (
     storePosts = storePosts.filter(post => post.storeLocation?.region === filters.region);
   }
 
+  if (filters.district) {
+    farmPosts = farmPosts.filter(post => post.FarmProfile?.farmLocation?.district === filters.district);
+    storePosts = storePosts.filter(post => post.storeLocation?.district === filters.district);
+  }
+
   return { farmPosts, storePosts };
+};
+
+export const selectCategoryName = (state: { posts: PostsState }, categoryId: string) => {
+  const firstPost = 
+    state.posts.farmPosts.find(post => post.category?.id === categoryId) ||
+    state.posts.storePosts.find(post => post.category?.id === categoryId);
+  return firstPost?.category?.name;
+};
+
+export const selectSubcategoryName = (state: { posts: PostsState }, subcategoryId: string) => {
+  const firstPost = 
+    state.posts.farmPosts.find(post => post.subcategory?.id === subcategoryId) ||
+    state.posts.storePosts.find(post => post.subcategory?.id === subcategoryId);
+  return firstPost?.subcategory?.name;
 };

@@ -67,7 +67,7 @@ function FarmPostProfile(props: FarmPostProfileProps) {
   return (
     <BasePostProfile
       {...props}
-      postType="farm" // or "store"
+      postType="farm"
       renderPriceSection={renderPriceSection}
       renderAdditionalDetails={renderAdditionalDetails}
       renderMoreProductData={() => <MoreFarmProductData />}

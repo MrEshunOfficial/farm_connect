@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -29,23 +31,45 @@ import FooterActions from "./ActionButtons";
 interface SidebarProps {
   isMobile?: boolean;
   initialCollapsed?: boolean;
+  isSidebarOpen?: boolean;
+  setIsSidebarOpen?: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsSidebarCollapsed?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const AsideLayout: React.FC<SidebarProps> = ({
   isMobile = false,
   initialCollapsed = false,
+  isSidebarOpen = true,
+  setIsSidebarOpen,
+  setIsSidebarCollapsed,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { data: session } = useSession();
   const activeProfile = useAppSelector(selectMyProfile);
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] =
+  const [localIsSidebarCollapsed, setLocalIsSidebarCollapsed] =
     useState(initialCollapsed);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [localIsSidebarOpen, setLocalIsSidebarOpen] = useState(isSidebarOpen);
+
+  // Use parent state if provided, otherwise use local state
+  const isSidebarCollapsed = setIsSidebarCollapsed
+    ? initialCollapsed
+    : localIsSidebarCollapsed;
+  const actualIsSidebarOpen = setIsSidebarOpen
+    ? isSidebarOpen
+    : localIsSidebarOpen;
 
   useEffect(() => {
     dispatch(fetchMyProfile());
   }, [dispatch]);
+
+  useEffect(() => {
+    setLocalIsSidebarOpen(isSidebarOpen);
+  }, [isSidebarOpen]);
+
+  useEffect(() => {
+    setLocalIsSidebarCollapsed(initialCollapsed);
+  }, [initialCollapsed]);
 
   const sidebarAnimation = {
     open: {
@@ -64,9 +88,19 @@ const AsideLayout: React.FC<SidebarProps> = ({
 
   const toggleSidebar = () => {
     if (isMobile) {
-      setIsSidebarOpen(!isSidebarOpen);
+      // Use parent setter if available, otherwise use local
+      if (setIsSidebarOpen) {
+        setIsSidebarOpen(!actualIsSidebarOpen);
+      } else {
+        setLocalIsSidebarOpen(!localIsSidebarOpen);
+      }
     } else {
-      setIsSidebarCollapsed(!isSidebarCollapsed);
+      // Use parent setter if available, otherwise use local
+      if (setIsSidebarCollapsed) {
+        setIsSidebarCollapsed(!isSidebarCollapsed);
+      } else {
+        setLocalIsSidebarCollapsed(!localIsSidebarCollapsed);
+      }
     }
   };
 
@@ -171,7 +205,9 @@ const AsideLayout: React.FC<SidebarProps> = ({
                                       }`}
                                     aria-label={subItem.ariaLabel}
                                     onClick={() =>
-                                      isMobile && setIsSidebarOpen(false)
+                                      isMobile && setIsSidebarOpen
+                                        ? setIsSidebarOpen(false)
+                                        : setLocalIsSidebarOpen(false)
                                     }
                                   >
                                     <motion.div
@@ -231,7 +267,13 @@ const AsideLayout: React.FC<SidebarProps> = ({
                 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-gray-800 dark:hover:text-blue-400 group
                 ${isSidebarCollapsed && !isMobile ? "justify-center" : ""}`}
               aria-label={item.ariaLabel}
-              onClick={() => isMobile && setIsSidebarOpen(false)}
+              onClick={() => {
+                if (isMobile) {
+                  setIsSidebarOpen
+                    ? setIsSidebarOpen(false)
+                    : setLocalIsSidebarOpen(false);
+                }
+              }}
             >
               <motion.div
                 whileHover={{ scale: 1.1 }}
@@ -266,19 +308,24 @@ const AsideLayout: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {isMobile && isSidebarOpen && (
+      {isMobile && actualIsSidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={() =>
+            setIsSidebarOpen
+              ? setIsSidebarOpen(false)
+              : setLocalIsSidebarOpen(false)
+          }
         />
       )}
 
       <motion.aside
         className={`fixed md:relative z-50 h-full bg-gray-50 dark:bg-gray-900 rounded-xl shadow-lg overflow-hidden ${
-          isMobile ? (isSidebarOpen ? "block" : "hidden") : ""
+          isMobile ? (actualIsSidebarOpen ? "block" : "hidden") : ""
         }`}
         animate={
-          (isMobile && !isSidebarOpen) || (!isMobile && isSidebarCollapsed)
+          (isMobile && !actualIsSidebarOpen) ||
+          (!isMobile && isSidebarCollapsed)
             ? "collapsed"
             : "open"
         }
@@ -314,7 +361,7 @@ const AsideLayout: React.FC<SidebarProps> = ({
               onClick={toggleSidebar}
               className="absolute top-4 right-4 z-10 md:hidden"
             >
-              {isSidebarOpen ? "Close" : "Menu"}
+              {actualIsSidebarOpen ? "Close" : "Menu"}
             </Button>
           </div>
         </div>

@@ -44,10 +44,13 @@ export const ProductionScale = {
 export interface IReview extends Document {
   _id: Types.ObjectId;
   userId: string;
-  reviewerId: Types.ObjectId;
-  revieweeId: Types.ObjectId;
-  review: string;
+  recipientId: Types.ObjectId;
+  authorName: string;
+  reviewerAvatar: string;
   rating: number;
+  content: string;
+  helpful: number;
+  role: string;
   createdAt: Date;
   updatedAt: Date;
 }

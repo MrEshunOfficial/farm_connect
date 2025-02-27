@@ -29,9 +29,10 @@ export const StoreFormUI: React.FC<BaseStoreFormProps> = ({
     formId,
     storeImage
   );
-  const { handleSubmit } = useStoreSubmit(userId);
 
+  const { handleSubmit } = useStoreSubmit(userId);
   const authCheck = <AuthCheck userId={userId} />;
+  
   if (!userId) return authCheck;
 
   return (
