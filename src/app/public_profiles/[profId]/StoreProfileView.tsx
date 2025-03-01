@@ -73,7 +73,7 @@ export default function StoreProfileView({
   };
 
   return (
-    <Card className="h-full overflow-auto bg-white dark:bg-gray-900">
+    <Card className="max-h-[70vh] overflow-auto bg-white dark:bg-gray-900">
       <CardHeader className="bg-white dark:bg-gray-800 sticky top-0 z-10 shadow-sm">
         <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-200">
           {storeProfile.storeName}

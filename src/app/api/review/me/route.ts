@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       .populate({
         path: 'userId',
         model: UserProfile,
-        select: '_id fullName profilePicture verified'
+        select: '_id fullName profilePicture role verified'
       })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -179,11 +179,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-
-
-
 
 // GET /api/review/posted - Get all reviews posted BY the current user
 // export async function GET(request: NextRequest) {

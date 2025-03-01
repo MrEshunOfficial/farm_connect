@@ -39,7 +39,7 @@ import {
 import VerificationBadge from "@/app/profile/VerifiedBadge";
 
 // Redux actions
-import { fetchMyReviews } from "@/store/review.slice";
+import { fetchMyReviews, fetchUserReviews } from "@/store/review.slice";
 
 // Import interfaces
 import { IUserProfile, IReview } from "@/models/profileI-interfaces";
@@ -69,6 +69,7 @@ const RatingStars = ({ rating }: { rating: number }) => {
   );
 };
 
+// Fixed interface to match Redux state structure
 interface ReviewStateType {
   reviews: IReview[];
   isLoading: boolean;
@@ -78,9 +79,17 @@ interface ReviewStateType {
 }
 
 // User Reviews component
-const UserReviews = ({ userId }: { userId: string }) => {
+const UserReviews = ({
+  userId,
+  paramsId,
+}: {
+  userId: string;
+  paramsId: string;
+}) => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+
+  // Changed to match Redux state structure
   const {
     reviews = [],
     isLoading,
@@ -89,9 +98,14 @@ const UserReviews = ({ userId }: { userId: string }) => {
 
   useEffect(() => {
     if (userId) {
-      dispatch(fetchMyReviews({ page: 1, limit: 3 }));
+      // Fixed: Added dispatch
+      dispatch(
+        fetchUserReviews({
+          userId: paramsId,
+        })
+      );
     }
-  }, [dispatch, userId]);
+  }, [dispatch, paramsId, userId]);
 
   // Calculate average rating
   const averageRating = reviews.length
@@ -402,11 +416,16 @@ const ProfileDetails = ({ profile }: { profile: IUserProfile }) => {
   );
 };
 
+// Updated interface to include paramsId
 interface ProfileSidebarProps {
   profile: ExtendedUserProfile;
+  paramsId: string;
 }
 
-const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile }) => {
+const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
+  profile,
+  paramsId,
+}) => {
   return (
     <>
       {/* Profile Info Card */}
@@ -424,7 +443,7 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile }) => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <UserReviews userId={profile._id.toString()} />
+          <UserReviews userId={profile.userId} paramsId={paramsId} />
         </CardContent>
       </Card>
     </>

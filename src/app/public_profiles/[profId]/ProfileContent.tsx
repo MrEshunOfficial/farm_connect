@@ -1,6 +1,4 @@
-// ProfileContent.tsx
 import React from "react";
-import { useRouter } from "next/navigation";
 
 // UI Components
 import {
@@ -10,6 +8,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,6 +36,7 @@ interface ProfileContentProps {
   postsError: string | null;
   farmPosts: IFarmPostDocument[];
   storePosts: IStorePostDocument[];
+  activeTab?: string;
 }
 
 const ProfileContent: React.FC<ProfileContentProps> = ({
@@ -45,8 +45,20 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
   postsError,
   farmPosts,
   storePosts,
+  activeTab,
 }) => {
-  const router = useRouter();
+  if (!activeProfile) {
+    return (
+      <Card className="h-full shadow-md border-0">
+        <CardHeader>
+          <CardTitle>Profile Not Found</CardTitle>
+        </CardHeader>
+        <CardContent className="text-center text-gray-500 py-8">
+          <p>The requested profile could not be found.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (postsLoading) {
     return (
@@ -88,14 +100,21 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
     );
   }
 
-  // User with either farm or store but not both
+  let defaultTab = "store-posts";
   if (
-    activeProfile?.role === UserRole.Farmer ||
-    activeProfile?.role === UserRole.Seller
+    activeTab === "farms" ||
+    (farmPosts.length > 0 && storePosts.length === 0)
   ) {
+    defaultTab = "farm-posts";
+  }
+
+  const isSingleRole =
+    activeProfile.role === UserRole.Farmer ||
+    activeProfile.role === UserRole.Seller;
+
+  if (isSingleRole) {
     const isFarmer = activeProfile.role === UserRole.Farmer;
     const posts = isFarmer ? farmPosts : storePosts;
-    const PostsList = isFarmer ? FarmPostsList : StorePostsList;
     const icon = isFarmer ? (
       <Leaf className="w-5 h-5 text-green-500" />
     ) : (
@@ -135,18 +154,18 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
     );
   }
 
-  // User with both farm and store
+  // For users with both farm and store roles or when role isn't specified, show tabs
   return (
     <Card className="h-full shadow-md border-0">
       <CardHeader>
         <CardTitle>Marketplace Listings</CardTitle>
         <CardDescription>
-          Browse all offerings from {activeProfile?.username}
+          Browse all offerings from {activeProfile.username}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <Tabs defaultValue="store-posts" className="w-full">
-          <TabsList className="w-full grid grid-cols-2 mb-3 px-3 pt-3">
+        <Tabs defaultValue={defaultTab} className="w-full">
+          <TabsList className="w-full grid grid-cols-2">
             <TabsTrigger
               value="store-posts"
               className="flex items-center gap-2"
