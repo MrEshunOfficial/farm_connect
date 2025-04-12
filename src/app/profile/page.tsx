@@ -1,7 +1,6 @@
-// ProfilePage.tsx - Fixed version
+// ProfilePage.tsx - Updated version
 "use client";
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAppSelector } from "@/store/hooks";
@@ -25,7 +24,6 @@ import { useSession } from "next-auth/react";
 import ProfileCard from "./ProfileCard";
 
 export default function ProfilePage() {
-  const router = useRouter();
   const activeProfile = useAppSelector(selectMyProfile);
   const profileLoadingStatus = useAppSelector(selectUserProfileLoading);
   const dispatch = useDispatch<AppDispatch>();
@@ -39,25 +37,10 @@ export default function ProfilePage() {
   const [hasInitialFetch, setHasInitialFetch] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [profileChecked, setProfileChecked] = useState(false);
 
   useEffect(() => {
-    if (
-      session?.user &&
-      !activeProfile &&
-      profileLoadingStatus !== "pending" &&
-      !profileChecked
-    ) {
-      setProfileChecked(true);
-      router.push("/profile/profile_form");
-      return;
-    }
-
-    if (activeProfile && !profileChecked) {
-      setProfileChecked(true);
-    }
-
     const fetchPosts = async () => {
+      // Only fetch posts if we have a user ID, active profile, and haven't fetched already
       if (userId && activeProfile && !hasInitialFetch && !loading) {
         setLoading(true);
 
@@ -84,17 +67,7 @@ export default function ProfilePage() {
     };
 
     fetchPosts();
-  }, [
-    dispatch,
-    userId,
-    hasInitialFetch,
-    activeProfile,
-    session,
-    router,
-    loading,
-    profileLoadingStatus,
-    profileChecked,
-  ]);
+  }, [dispatch, userId, hasInitialFetch, activeProfile, loading]);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -111,7 +84,7 @@ export default function ProfilePage() {
     };
   }, [loading]);
 
-  if (profileLoadingStatus === "pending" && !profileChecked) {
+  if (profileLoadingStatus === "pending") {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -123,7 +96,20 @@ export default function ProfilePage() {
   }
 
   if (!activeProfile) {
-    return null;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center p-6 max-w-md">
+          <h2 className="text-xl font-semibold mb-3">No Profile Found</h2>
+          <p className="mb-4">You don&apos;t have an active profile yet.</p>
+          <a
+            href="/profile/profile_form"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Create Profile
+          </a>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
