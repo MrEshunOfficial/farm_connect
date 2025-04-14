@@ -3,17 +3,14 @@
 import RenderSearchPosts from "../post.components/RenderSearchPosts";
 
 interface SearchPageProps {
-  initialSearchTerm: string;
-  regionsData: any[];
+  search: string;
+  regions: any[];
 }
 
-export default function SearchPage({
-  initialSearchTerm,
-  regionsData,
-}: SearchPageProps) {
+export default function SearchPage({ search, regions }: SearchPageProps) {
   return (
     <div className="w-full">
-      <RenderSearchPosts search={initialSearchTerm} regions={regionsData} />
+      <RenderSearchPosts search={search} regions={regions} />
     </div>
   );
 }
