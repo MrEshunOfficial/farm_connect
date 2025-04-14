@@ -71,13 +71,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <motion.main className="w-full h-[88vh] flex flex-col md:flex-row items-stretch gap-2 dark:bg-black text-gray-900 dark:text-gray-100">
-      <AsideLayout
-        isMobile={isMobile}
-        initialCollapsed={isSidebarCollapsed}
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-        setIsSidebarCollapsed={setIsSidebarCollapsed}
-      />
+      {activeProfile && (
+        <AsideLayout
+          isMobile={isMobile}
+          initialCollapsed={isSidebarCollapsed}
+          isSidebarOpen={isSidebarOpen}
+          setIsSidebarOpen={setIsSidebarOpen}
+          setIsSidebarCollapsed={setIsSidebarCollapsed}
+        />
+      )}
 
       <motion.section
         layout

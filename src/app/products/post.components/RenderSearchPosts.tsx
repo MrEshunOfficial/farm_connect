@@ -93,6 +93,7 @@ export function RenderSearchPosts({ search, regions = [] }: PostsPageProps) {
         {regions && regions.length > 0 && (
           <div className="mb-4">
             <SearchSection
+              profile={null}
               regions={regions}
               onSearch={handleSearch}
               initialSearchValue={searchInput}
