@@ -2,15 +2,15 @@
 
 import RenderSearchPosts from "../post.components/RenderSearchPosts";
 
-interface RenderSearchPostsProps {
+interface SearchPageProps {
   initialSearchTerm: string;
   regionsData: any[];
 }
 
-export default function SearPage({
+export default function SearchPage({
   initialSearchTerm,
   regionsData,
-}: RenderSearchPostsProps) {
+}: SearchPageProps) {
   return (
     <div className="w-full">
       <RenderSearchPosts search={initialSearchTerm} regions={regionsData} />
