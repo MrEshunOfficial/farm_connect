@@ -16,7 +16,10 @@ interface PostsPageProps {
   regions?: any[];
 }
 
-export function RenderSearchPosts({ search, regions = [] }: PostsPageProps) {
+export default function RenderSearchPosts({
+  search,
+  regions = [],
+}: PostsPageProps) {
   const searchParams = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
   const loading = useSelector(selectPostsLoading);

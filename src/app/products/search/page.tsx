@@ -1,6 +1,6 @@
 "use client";
 
-import { RenderSearchPosts } from "../post.components/RenderSearchPosts";
+import RenderSearchPosts from "../post.components/RenderSearchPosts";
 
 interface RenderSearchPostsProps {
   initialSearchTerm: string;
