@@ -1,3 +1,4 @@
+// api/review/[id]/helpful/route.ts
 import { auth } from '@/auth';
 import { connect } from '@/hooks/dbconfigue/dbConfigue';
 import { NextRequest, NextResponse } from 'next/server';
@@ -21,12 +22,8 @@ function isValidObjectId(id: string): boolean {
   return Types.ObjectId.isValid(id);
 }
 
-// ========================================
-// api/review/[id]/helpful/route.ts
-// ========================================
-
 // PATCH /api/review/[id]/helpful - Mark a review as helpful
-export async function PATCH_HELPFUL(
+export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
