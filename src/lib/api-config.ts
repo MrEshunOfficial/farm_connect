@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  baseUrl: 'https://category-api-k33a.vercel.app/api',
+  baseUrl: 'https://category-api-iota.vercel.app/api',
   endpoints: {
     categories: '/productcategoryapi',
     regions: '/regions'

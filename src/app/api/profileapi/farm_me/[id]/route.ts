@@ -1,9 +1,25 @@
 import { connect } from '@/hooks/dbconfigue/dbConfigue';
-import { FarmProfile} from '@/models/profileModel/userProfileModel';
+import { FarmProfile } from '@/models/profileModel/userProfileModel';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { isValidObjectId } from 'mongoose';
 import { FarmType, IFarmProfile } from '@/models/profileI-interfaces';
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+interface ArrayUpdate {
+  field: string;
+  operation: 'add' | 'remove' | 'update';
+  value?: any;
+  index?: number;
+}
+
+interface UpdatePayload {
+  basicInfo?: Partial<IFarmProfile>;
+  arrayUpdates?: ArrayUpdate[];
+}
 
 async function validateAuthenticatedUser() {
   const session = await auth();
@@ -29,7 +45,7 @@ function getFarmTypeField(farmType: string): keyof IFarmProfile | null {
 }
 
 // Helper function to clear all production-related fields
-function clearAllProductionFields(farmProfile: IFarmProfile, keepField?: keyof IFarmProfile) {
+function clearAllProductionFields(farmProfile: IFarmProfile, keepField?: keyof IFarmProfile): void {
   const fieldsToClean = [
     'cropsGrown',
     'livestockProduced',
@@ -46,14 +62,44 @@ function clearAllProductionFields(farmProfile: IFarmProfile, keepField?: keyof I
     }
   });
 }
+
+// Helper function to process array updates
+function processArrayUpdate(farmProfile: IFarmProfile, update: ArrayUpdate): void {
+  const field = update.field as keyof IFarmProfile;
+  
+  switch (update.operation) {
+    case 'add': {
+      if (!farmProfile[field]) {
+        (farmProfile[field] as any[]) = [];
+      }
+      (farmProfile[field] as any[]).push(update.value);
+      break;
+    }
+    case 'remove': {
+      const array = farmProfile[field] as any[];
+      if (Array.isArray(array) && typeof update.index === 'number' && update.index < array.length) {
+        array.splice(update.index, 1);
+      }
+      break;
+    }
+    case 'update': {
+      const array = farmProfile[field] as any[];
+      if (Array.isArray(array) && typeof update.index === 'number' && update.index < array.length) {
+        array[update.index] = update.value;
+      }
+      break;
+    }
+  }
+}
+
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: RouteParams
+): Promise<NextResponse> {
   try {
     await connect();
     const user = await validateAuthenticatedUser();
-    const { id } = params;
+    const { id } = await context.params;
 
     if (!isValidObjectId(id)) {
       return NextResponse.json({
@@ -62,7 +108,9 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    const { basicInfo, arrayUpdates } = await req.json();
+    const payload: UpdatePayload = await req.json();
+    const { basicInfo, arrayUpdates } = payload;
+
     let farmProfile = await FarmProfile.findOne({ _id: id, userId: user.id });
 
     if (!farmProfile) {
@@ -88,7 +136,7 @@ export async function PUT(
       // If there are array updates, only process the ones that match the new farm type
       if (arrayUpdates && arrayUpdates.length > 0) {
         const validField = getFarmTypeField(basicInfo.farmType);
-        const validUpdates = arrayUpdates.filter((update: { field: string | null; }) => update.field === validField);
+        const validUpdates = arrayUpdates.filter(update => update.field === validField);
 
         if (validUpdates.length !== arrayUpdates.length) {
           return NextResponse.json({
@@ -98,31 +146,7 @@ export async function PUT(
         }
 
         // Process valid updates
-        for (const update of validUpdates) {
-          switch (update.operation) {
-            case 'add': {
-              if (!farmProfile[update.field as keyof IFarmProfile]) {
-                (farmProfile[update.field as keyof IFarmProfile] as any[]) = [];
-              }
-              (farmProfile[update.field as keyof IFarmProfile] as any[]).push(update.value);
-              break;
-            }
-            case 'remove': {
-              const array = farmProfile[update.field as keyof IFarmProfile] as any[];
-              if (Array.isArray(array) && update.index! < array.length) {
-                array.splice(update.index!, 1);
-              }
-              break;
-            }
-            case 'update': {
-              if (Array.isArray(farmProfile[update.field as keyof IFarmProfile]) && 
-                  update.index! < (farmProfile[update.field as keyof IFarmProfile] as any[]).length) {
-                (farmProfile[update.field as keyof IFarmProfile] as any[])[update.index!] = update.value;
-              }
-              break;
-            }
-          }
-        }
+        validUpdates.forEach(update => processArrayUpdate(farmProfile, update));
       }
     } else if (arrayUpdates && arrayUpdates.length > 0) {
       // If farm type hasn't changed, validate updates against current farm type
@@ -136,41 +160,20 @@ export async function PUT(
           }, { status: 400 });
         }
 
-        switch (update.operation) {
-          case 'remove': {
-            const array = farmProfile[update.field as keyof IFarmProfile] as any[];
-            if (Array.isArray(array) && update.index! < array.length) {
-              array.splice(update.index!, 1);
-            }
-            break;
-          }
-          case 'add': {
-            if (!farmProfile[update.field as keyof IFarmProfile]) {
-              (farmProfile[update.field as keyof IFarmProfile] as any[]) = [];
-            }
-            (farmProfile[update.field as keyof IFarmProfile] as any[]).push(update.value);
-            break;
-          }
-          case 'update': {
-            if (Array.isArray(farmProfile[update.field as keyof IFarmProfile]) && 
-                update.index! < (farmProfile[update.field as keyof IFarmProfile] as any[]).length) {
-              (farmProfile[update.field as keyof IFarmProfile] as any[])[update.index!] = update.value;
-            }
-            break;
-          }
-        }
+        processArrayUpdate(farmProfile, update);
       }
     }
 
     await farmProfile.save();
-    farmProfile = await farmProfile.populate('userProfile', 'fullName email');
+    const populatedProfile = await farmProfile.populate('userProfile', 'fullName email');
 
     return NextResponse.json({
       success: true,
-      data: farmProfile
+      data: populatedProfile
     }, { status: 200 });
     
   } catch (error) {
+    console.error('Error in PUT /api/farm/[id]:', error);
     const message = error instanceof Error ? error.message : 'An error occurred';
     
     return NextResponse.json({
@@ -184,13 +187,13 @@ export async function PUT(
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: RouteParams
+): Promise<NextResponse> {
   try {
     await connect();
-    await validateAuthenticatedUser();
+    const user = await validateAuthenticatedUser();
+    const { id } = await context.params;
 
-    const { id } = params;
     if (!isValidObjectId(id)) {
       return NextResponse.json({
         success: false,
@@ -198,12 +201,12 @@ export async function GET(
       }, { status: 400 });
     }
 
-    const farmProfile = await FarmProfile.findById(id);
+    const farmProfile = await FarmProfile.findOne({ _id: id, userId: user.id });
     
     if (!farmProfile) {
       return NextResponse.json({
         success: false,
-        error: 'Farm profile not found'
+        error: 'Farm profile not found or unauthorized'
       }, { status: 404 });
     }
 
@@ -215,7 +218,9 @@ export async function GET(
     }, { status: 200 });
 
   } catch (error) {
+    console.error('Error in GET /api/farm/[id]:', error);
     const message = error instanceof Error ? error.message : 'An error occurred';
+    
     return NextResponse.json({
       success: false,
       error: message
@@ -226,14 +231,14 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+  req: NextRequest,
+  context: RouteParams
+): Promise<NextResponse> {
   try {
     await connect();
     const user = await validateAuthenticatedUser();
+    const { id } = await context.params;
 
-    const { id } = params;
     if (!isValidObjectId(id)) {
       return NextResponse.json({
         success: false,

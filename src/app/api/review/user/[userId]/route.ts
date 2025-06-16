@@ -1,33 +1,47 @@
-// api/review/user/[userId]/route.ts
+import { auth } from '@/auth';
 import { connect } from '@/hooks/dbconfigue/dbConfigue';
 import { NextRequest, NextResponse } from 'next/server';
 import { UserProfile } from '@/models/profileModel/userProfileModel';
-import { UserReview } from '@/models/profileModel/reviewModel';
 import { Types } from 'mongoose';
+import { UserReview } from '@/models/profileModel/reviewModel';
 
 // Connect to the database
 connect();
+
+// Helper function to validate authenticated user
+async function validateAuthenticatedUser() {
+  const session = await auth();
+  if (!session?.user?.email || !session?.user?.id) {
+    throw new Error('Not authenticated');
+  }
+  return session.user;
+}
 
 // Helper to validate ObjectId
 function isValidObjectId(id: string): boolean {
   return Types.ObjectId.isValid(id);
 }
 
+
+// ========================================
+// api/review/user/[userId]/route.ts
+// ========================================
+
 // GET /api/review/user/[userId] - Get all reviews for a specific user
-export async function GET(
+export async function GET_USER_REVIEWS(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  context: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params;
-    
+    const { userId } = await context.params;
+   
     if (!isValidObjectId(userId)) {
       return NextResponse.json(
         { success: false, error: 'Invalid user ID format' },
         { status: 400 }
       );
     }
-    
+   
     // Get pagination parameters from URL
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
@@ -36,7 +50,7 @@ export async function GET(
 
     // First find the user profile to confirm it exists
     const userProfile = await UserProfile.findById(userId);
-    
+   
     if (!userProfile) {
       return NextResponse.json(
         { success: false, error: 'User profile not found' },
@@ -58,7 +72,6 @@ export async function GET(
     // Get total count for pagination
     const totalDocs = await UserReview.countDocuments({ recipientId: userId });
     const totalPages = Math.ceil(totalDocs / limit);
-
     const pagination = {
       page,
       limit,
@@ -73,7 +86,6 @@ export async function GET(
       data: userReviews,
       pagination
     }, { status: 200 });
-
   } catch (error: any) {
     console.error('Error fetching reviews for user:', error);
     return NextResponse.json(

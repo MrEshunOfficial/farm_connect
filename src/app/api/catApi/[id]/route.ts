@@ -3,8 +3,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { CartItem } from '@/models/profileModel/cartModel';
 
+// Types for better TypeScript support
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+interface CartItemUpdateData {
+  quantity?: number;
+  price?: number;
+  title?: string;
+  imageUrl?: string;
+  currency?: string;
+  unit?: string;
+}
+
 // Helper function to handle errors
-function handleError(error: any) {
+function handleError(error: any): NextResponse {
   console.error('Cart operation error:', error);
   return NextResponse.json(
     { 
@@ -29,14 +43,17 @@ async function validateAuthenticatedUser() {
 // GET specific cart item
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: RouteParams
+): Promise<NextResponse> {
   try {
     await connect();
     const user = await validateAuthenticatedUser();
     
+    // Await the params as they're now asynchronous
+    const { id } = await context.params;
+    
     const cartItem = await CartItem.findOne({ 
-      _id: params.id,
+      _id: id,
       userId: user.id 
     });
     
@@ -59,17 +76,19 @@ export async function GET(
 // PUT update cart item
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: RouteParams
+): Promise<NextResponse> {
   try {
     await connect();
     const user = await validateAuthenticatedUser();
     
-    const body = await req.json();
+    // Await the params as they're now asynchronous
+    const { id } = await context.params;
+    const body: CartItemUpdateData = await req.json();
     
     // Find the cart item
     const cartItem = await CartItem.findOne({ 
-      _id: params.id,
+      _id: id,
       userId: user.id 
     });
     
@@ -80,7 +99,7 @@ export async function PUT(
       );
     }
     
-    // Update fields
+    // Validate quantity if provided
     if (body.quantity !== undefined) {
       if (body.quantity < 1) {
         return NextResponse.json(
@@ -91,32 +110,22 @@ export async function PUT(
       cartItem.quantity = body.quantity;
     }
     
-    // Add other updatable fields as needed
-    if (body.price !== undefined) {
-      cartItem.price = body.price;
-    }
+    // Update other fields if provided
+    const updateableFields: (keyof CartItemUpdateData)[] = [
+      'price', 'title', 'imageUrl', 'currency', 'unit'
+    ];
     
-    if (body.title !== undefined) {
-      cartItem.title = body.title;
-    }
-    
-    if (body.imageUrl !== undefined) {
-      cartItem.imageUrl = body.imageUrl;
-    }
-    
-    if (body.currency !== undefined) {
-      cartItem.currency = body.currency;
-    }
-    
-    if (body.unit !== undefined) {
-      cartItem.unit = body.unit;
-    }
+    updateableFields.forEach(field => {
+      if (body[field] !== undefined) {
+        cartItem[field] = body[field];
+      }
+    });
     
     await cartItem.save();
     
     return NextResponse.json({ 
       success: true, 
-      message: 'Cart item updated',
+      message: 'Cart item updated successfully',
       data: cartItem 
     });
   } catch (error: any) {
@@ -127,15 +136,18 @@ export async function PUT(
 // DELETE remove item from cart
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: RouteParams
+): Promise<NextResponse> {
   try {
     await connect();
     const user = await validateAuthenticatedUser();
     
+    // Await the params as they're now asynchronous
+    const { id } = await context.params;
+    
     // Find and delete the cart item
     const result = await CartItem.findOneAndDelete({ 
-      _id: params.id,
+      _id: id,
       userId: user.id 
     });
     
@@ -148,7 +160,7 @@ export async function DELETE(
     
     return NextResponse.json({ 
       success: true, 
-      message: 'Item removed from cart'
+      message: 'Item removed from cart successfully'
     });
   } catch (error: any) {
     return handleError(error);

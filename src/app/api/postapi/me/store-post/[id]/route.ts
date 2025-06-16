@@ -3,31 +3,84 @@ import { connect } from '@/hooks/dbconfigue/dbConfigue';
 import { StorePost } from '@/models/post.model/store-post-schema';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Types for better TypeScript support
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+interface StorePostUpdateData {
+  title?: string;
+  description?: string;
+  price?: number;
+  location?: string;
+  category?: string;
+  images?: string[];
+  storeProfile?: string;
+  inventory?: number;
+  [key: string]: any; // Allow for additional fields
+}
+
 // Connect to the database
 connect();
+
+// Helper function to handle errors
+function handleError(error: any, context: string = 'operation'): NextResponse {
+  console.error(`Store post ${context} error:`, error);
+  return NextResponse.json(
+    { 
+      success: false, 
+      error: error.message || `An error occurred during the ${context}`
+    },
+    { status: error.status || 500 }
+  );
+}
 
 // Helper function to validate authenticated user
 async function validateAuthenticatedUser() {
   const session = await auth();
   if (!session?.user?.email || !session?.user?.id) {
-    throw new Error('Not authenticated');
+    const error = new Error('Not authenticated');
+    Object.defineProperty(error, 'status', { value: 401 });
+    throw error;
   }
   return session.user;
 }
 
+// Helper function to validate post ownership
+async function validatePostOwnership(postId: string, userId: string) {
+  const storePost = await StorePost.findById(postId);
+  if (!storePost) {
+    const error = new Error('Store post not found');
+    Object.defineProperty(error, 'status', { value: 404 });
+    throw error;
+  }
+
+  if (storePost.userId.toString() !== userId) {
+    const error = new Error('Unauthorized - You can only modify your own posts');
+    Object.defineProperty(error, 'status', { value: 403 });
+    throw error;
+  }
+
+  return storePost;
+}
+
+// GET /api/store-posts/[id] - Fetch a single store post by ID or posts by userId
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+  context: RouteParams
+): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const { id } = await context.params;
     
     let query;
     if (userId) {
+      // If userId is provided, fetch all posts by that user
       query = StorePost.find({ userProfile: userId });
     } else {
-      query = StorePost.findById(params.id);
+      // Otherwise, fetch specific post by ID
+      query = StorePost.findById(id);
     }
 
     // Apply population to either query type
@@ -35,9 +88,9 @@ export async function GET(
       .populate('userProfile')
       .populate('storeProfile');
 
-    if (!storePost) {
+    if (!storePost || (Array.isArray(storePost) && storePost.length === 0)) {
       return NextResponse.json(
-        { success: false, error: 'Store post not found' },
+        { success: false, error: 'Store post(s) not found' },
         { status: 404 }
       );
     }
@@ -48,80 +101,141 @@ export async function GET(
     );
 
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    return handleError(error, 'fetch');
   }
 }
 
-// PUT /api/store-posts/[id] - Update a store post by ID
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+// PUT /api/store-posts/[id] - Update a store post by ID (full replacement)
+export async function PUT(
+  request: NextRequest, 
+  context: RouteParams
+): Promise<NextResponse> {
   try {
     const user = await validateAuthenticatedUser();
-    const body = await request.json();
+    const { id } = await context.params;
+    const body: StorePostUpdateData = await request.json();
 
-    const storePost = await StorePost.findById(params.id);
-    if (!storePost) {
-      return NextResponse.json({ success: false, error: 'Store post not found' }, { status: 404 });
+    // Validate ownership
+    if (!user.id) {
+  throw new Error("User ID is missing");
+}
+await validatePostOwnership(id, user.id);
+
+    // Update the store post (full replacement)
+    const updatedStorePost = await StorePost.findByIdAndUpdate(
+      id, 
+      body, 
+      { new: true, runValidators: true }
+    )
+      .populate('userProfile')
+      .populate('storeProfile');
+
+    if (!updatedStorePost) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to update store post' }, 
+        { status: 500 }
+      );
     }
 
-    // Check if the authenticated user owns the post
-    if (storePost.userId.toString() !== user.id) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-    }
-
-    // Update the store post
-    const updatedStorePost = await StorePost.findByIdAndUpdate(params.id, body, { new: true });
-    return NextResponse.json({ success: true, data: updatedStorePost }, { status: 200 });
+    return NextResponse.json(
+      { 
+        success: true, 
+        message: 'Store post updated successfully',
+        data: updatedStorePost 
+      }, 
+      { status: 200 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return handleError(error, 'update');
   }
 }
 
 // PATCH /api/store-posts/[id] - Partially update a store post by ID
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: NextRequest, 
+  context: RouteParams
+): Promise<NextResponse> {
   try {
     const user = await validateAuthenticatedUser();
-    const body = await request.json();
+    const { id } = await context.params;
+    const body: Partial<StorePostUpdateData> = await request.json();
 
-    const storePost = await StorePost.findById(params.id);
-    if (!storePost) {
-      return NextResponse.json({ success: false, error: 'Store post not found' }, { status: 404 });
+    // Validate that body is not empty
+    if (!body || Object.keys(body).length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No update data provided' },
+        { status: 400 }
+      );
     }
 
-    // Check if the authenticated user owns the post
-    if (storePost.userId.toString() !== user.id) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-    }
+    // Validate ownership
+    if (!user.id) {
+  throw new Error("User ID is missing");
+}
+await validatePostOwnership(id, user.id);
 
     // Partially update the store post
-    const updatedStorePost = await StorePost.findByIdAndUpdate(params.id, { $set: body }, { new: true });
-    return NextResponse.json({ success: true, data: updatedStorePost }, { status: 200 });
+    const updatedStorePost = await StorePost.findByIdAndUpdate(
+      id, 
+      { $set: body }, 
+      { new: true, runValidators: true }
+    )
+      .populate('userProfile')
+      .populate('storeProfile');
+
+    if (!updatedStorePost) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to update store post' }, 
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { 
+        success: true, 
+        message: 'Store post updated successfully',
+        data: updatedStorePost 
+      }, 
+      { status: 200 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return handleError(error, 'partial update');
   }
 }
 
 // DELETE /api/store-posts/[id] - Delete a store post by ID
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest, 
+  context: RouteParams
+): Promise<NextResponse> {
   try {
     const user = await validateAuthenticatedUser();
+    const { id } = await context.params;
 
-    const storePost = await StorePost.findById(params.id);
-    if (!storePost) {
-      return NextResponse.json({ success: false, error: 'Store post not found' }, { status: 404 });
-    }
-
-    // Check if the authenticated user owns the post
-    if (storePost.userId.toString() !== user.id) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-    }
+    // Validate ownership
+    if (!user.id) {
+  throw new Error("User ID is missing");
+}
+await validatePostOwnership(id, user.id);
 
     // Delete the store post
-    await StorePost.findByIdAndDelete(params.id);
-    return NextResponse.json({ success: true, message: 'Store post deleted' }, { status: 200 });
+    const deletedPost = await StorePost.findByIdAndDelete(id);
+
+    if (!deletedPost) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to delete store post' }, 
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { 
+        success: true, 
+        message: 'Store post deleted successfully' 
+      }, 
+      { status: 200 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return handleError(error, 'delete');
   }
 }

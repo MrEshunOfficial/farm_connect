@@ -26,10 +26,10 @@ function isValidObjectId(id: string): boolean {
 // GET /api/review/[id] - Get a specific review
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
 
     if (!isValidObjectId(id)) {
       return NextResponse.json(
@@ -65,11 +65,11 @@ export async function GET(
 // PATCH /api/review/[id] - Update a review (only by its author)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await validateAuthenticatedUser();
-    const { id } = params;
+    const { id } = await context.params;
 
     if (!isValidObjectId(id)) {
       return NextResponse.json(
@@ -139,11 +139,11 @@ export async function PATCH(
 // DELETE /api/review/[id] - Delete a review (only by its author)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await validateAuthenticatedUser();
-    const { id } = params;
+    const { id } = await context.params;
 
     if (!isValidObjectId(id)) {
       return NextResponse.json(
