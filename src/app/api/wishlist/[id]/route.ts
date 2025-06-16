@@ -35,7 +35,7 @@ function handleError(error: any) {
 }
 
 // GET specific wishlist item
-export async function GET_WISHLIST_ITEM(
+export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
@@ -119,7 +119,7 @@ export async function PUT(
 }
 
 // DELETE remove item from wishlist
-export async function DELETE_WISHLIST_ITEM(
+export async function DELETE(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {

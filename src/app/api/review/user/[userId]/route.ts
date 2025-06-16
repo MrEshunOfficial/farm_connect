@@ -1,4 +1,4 @@
-import { auth } from '@/auth';
+// api/review/user/[userId]/route.ts
 import { connect } from '@/hooks/dbconfigue/dbConfigue';
 import { NextRequest, NextResponse } from 'next/server';
 import { UserProfile } from '@/models/profileModel/userProfileModel';
@@ -8,27 +8,13 @@ import { UserReview } from '@/models/profileModel/reviewModel';
 // Connect to the database
 connect();
 
-// Helper function to validate authenticated user
-async function validateAuthenticatedUser() {
-  const session = await auth();
-  if (!session?.user?.email || !session?.user?.id) {
-    throw new Error('Not authenticated');
-  }
-  return session.user;
-}
-
 // Helper to validate ObjectId
 function isValidObjectId(id: string): boolean {
   return Types.ObjectId.isValid(id);
 }
 
-
-// ========================================
-// api/review/user/[userId]/route.ts
-// ========================================
-
 // GET /api/review/user/[userId] - Get all reviews for a specific user
-export async function GET_USER_REVIEWS(
+export async function GET(
   request: NextRequest,
   context: { params: Promise<{ userId: string }> }
 ) {
