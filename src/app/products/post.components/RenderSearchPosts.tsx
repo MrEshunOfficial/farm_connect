@@ -1,3 +1,4 @@
+"use client";
 import { AppDispatch, RootState } from "@/store";
 import {
   selectPostsLoading,
